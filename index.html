@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+    <title>예배 찬양 악보</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+    <style>
+        :root { --bg-color: #f8f9fa; --text-color: #212529; --ui-bg: rgba(255, 255, 255, 0.95); }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg-color); color: var(--text-color); font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        
+        .header { position: fixed; top: 0; width: 100%; height: 55px; background: var(--ui-bg); display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 18px; font-weight: 600; box-shadow: 0 1px 5px rgba(0,0,0,0.05); transition: opacity 0.3s; }
+        .footer { position: fixed; bottom: 0; width: 100%; height: 60px; background: var(--ui-bg); display: flex; justify-content: space-around; align-items: center; z-index: 10; box-shadow: 0 -1px 5px rgba(0,0,0,0.05); transition: opacity 0.3s; }
+        .footer button { background: none; border: none; font-size: 16px; font-weight: 500; color: #007AFF; padding: 10px 20px; cursor: pointer; }
+
+        body.focus-mode .header, body.focus-mode .footer { opacity: 0; pointer-events: none; }
+
+        .swiper { width: 100%; height: 100vh; z-index: 1; }
+        .swiper-slide { display: flex; align-items: center; justify-content: center; }
+        .score-img { max-width: 100%; max-height: 100vh; object-fit: contain; }
+        
+        .setlist-overlay { position: fixed; top: 100%; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 20; transition: top 0.3s ease-in-out; display: flex; flex-direction: column; }
+        .setlist-overlay.active { top: 0; }
+        .setlist-header { padding: 20px; font-size: 20px; font-weight: bold; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; }
+        .close-btn { color: #dc3545; font-weight: bold; cursor: pointer; }
+        .setlist-items { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
+        .setlist-items li { padding: 18px 20px; border-bottom: 1px solid #eee; font-size: 16px; cursor: pointer; }
+        .setlist-items li:active { background: #e9ecef; }
+    </style>
+</head>
+<body>
+
+    <div class="header" id="song-title">준비 찬양</div>
+
+    <div class="swiper">
+        <div class="swiper-wrapper" id="slide-container"></div>
+    </div>
+
+    <div class="footer">
+        <button onclick="swiper.slidePrev()">이전</button>
+        <button id="btn-list">목록 보기</button>
+        <button onclick="swiper.slideNext()">다음</button>
+    </div>
+
+    <div class="setlist-overlay" id="setlist">
+        <div class="setlist-header">
+            <span>찬양 목록</span>
+            <span class="close-btn" id="btn-close-list">닫기</span>
+        </div>
+        <ul class="setlist-items" id="setlist-ul"></ul>
+    </div>
+
+    <script>
+        // 🎵 1. 악보 데이터 배열 (이 부분만 관리하시면 됩니다!)
+        // 순서를 바꾸려면 배열 요소의 위치를 위아래로 옮기기만 하면 됩니다.
+        const songList = [
+            { title: "1. 참 아름다와라", img: "/img/참_아름다와라.jpg" },
+            { title: "2. 나는 예배자입니다 / 소원", img: "/img/나는_예배자입니다,소원.png" },
+            { title: "3. 함께 지어져가네", img: "/img/함께_지어져가네.jpg" }
+        ];
+
+        let swiper;
+
+        $(document).ready(function() {
+            const $slideContainer = $('#slide-container');
+            const $setlistUl = $('#setlist-ul');
+
+            // 🎵 2. 데이터를 바탕으로 HTML 동적 렌더링
+            songList.forEach((song, index) => {
+                // 슬라이드 요소 생성
+                const slideHtml = `
+                    <div class="swiper-slide" data-title="${song.title}">
+                        <div class="swiper-zoom-container">
+                            <img src="${song.img}" class="score-img" alt="${song.title}">
+                        </div>
+                    </div>
+                `;
+                $slideContainer.append(slideHtml);
+
+                // 곡 목록(Setlist) 요소 생성
+                const listHtml = `<li data-index="${index}">${song.title}</li>`;
+                $setlistUl.append(listHtml);
+            });
+
+            // 🎵 3. DOM 생성이 완료된 후 Swiper 초기화
+            swiper = new Swiper('.swiper', {
+                zoom: { maxRatio: 3 },
+                loop: false,
+                on: {
+                    slideChange: function () {
+                        const activeSlide = this.slides[this.activeIndex];
+                        $('#song-title').text($(activeSlide).data('title'));
+                    }
+                }
+            });
+
+            // 초기 제목 세팅 (첫 번째 곡)
+            if (songList.length > 0) {
+                $('#song-title').text(songList[0].title);
+            }
+
+            // 🎵 4. 이벤트 리스너 세팅
+            // 몰입 모드 (화면 터치 시 메뉴 숨김)
+            $('#slide-container').on('click', function() {
+                $('body').toggleClass('focus-mode');
+            });
+
+            // 곡 목록 열기/닫기
+            $('#btn-list').on('click', function() {
+                $('#setlist').addClass('active');
+            });
+            $('#btn-close-list').on('click', function() {
+                $('#setlist').removeClass('active');
+            });
+
+            // 곡 목록에서 선택 시 해당 슬라이드로 이동
+            $('#setlist-ul').on('click', 'li', function() {
+                const targetIndex = $(this).data('index');
+                swiper.slideTo(targetIndex);
+                $('#setlist').removeClass('active');
+            });
+        });
+    </script>
+</body>
+</html>
